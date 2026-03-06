@@ -7,3 +7,4 @@
   param3: 100
 foo_1:
   param1: b
+  param2: str
