@@ -8,3 +8,4 @@
 foo_1:
   param1: b
   param2: str
+  param3: 10
