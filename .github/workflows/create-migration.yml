@@ -5,8 +5,6 @@ on:
 jobs:
   migration:
     runs-on: ubuntu-latest
-    container:
-      image: ruby:3.2.4
     permissions:
       contents: write
       pull-requests: write
@@ -40,7 +38,10 @@ jobs:
           echo "base=$BASE" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "commit_title=$COMMIT_TITLE" >> "$GITHUB_OUTPUT"
-      - run: date > date.txt
+      - uses: ruby/setup-ruby@v1
+      - run: gem install bundler
+      - run: bundle install
+      - run: bundle exec rails new . -n my_app -f
       - name: Commit and push migration
         run: |
           git add .
