@@ -1,0 +1,57 @@
+name: create-migration
+on:
+  repository_dispatch:
+    types: [create-migration]
+jobs:
+  migration:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      CLIENT_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+    steps:
+      - uses: actions/checkout@v4.1.0
+      - name: Setup git and create branch
+        id: branch
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          BASE=$(echo "$CLIENT_PAYLOAD" | jq -r '.base_branch')
+          TYPE=$(echo "$CLIENT_PAYLOAD" | jq -r '.type')
+          TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+
+          if [ "$TYPE" = "table" ]; then
+            TABLE=$(echo "$CLIENT_PAYLOAD" | jq -r '.name')
+            BRANCH="auto-migration-create-${TABLE}-${TIMESTAMP}"
+            COMMIT_TITLE="Create ${TABLE} table"
+          else
+            TABLE=$(echo "$CLIENT_PAYLOAD" | jq -r '.table')
+            BRANCH="auto-migration-add-columns-to-${TABLE}-${TIMESTAMP}"
+            COMMIT_TITLE="Add columns to ${TABLE}"
+          fi
+
+          git fetch origin "$BASE"
+          git checkout -b "$BRANCH" "origin/$BASE"
+
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "commit_title=$COMMIT_TITLE" >> "$GITHUB_OUTPUT"
+      - run: date > date.txt
+      - name: Commit and push migration
+        run: |
+          git add .
+          git diff --cached --quiet && { echo "Migration file was not created"; exit 1; }
+          git commit -m "${{ steps.branch.outputs.commit_title }}"
+          git push origin "${{ steps.branch.outputs.branch }}"
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BODY=$(printf 'Auto-generated migration from spec:\n\n```json\n%s\n```' "$(echo "$CLIENT_PAYLOAD" | jq '.')")
+          gh pr create \
+            --base "${{ steps.branch.outputs.base }}" \
+            --head "${{ steps.branch.outputs.branch }}" \
+            --title "${{ steps.branch.outputs.commit_title }}" \
+            --body "$BODY"
