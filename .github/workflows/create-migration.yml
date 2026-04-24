@@ -5,6 +5,8 @@ on:
 jobs:
   migration:
     runs-on: ubuntu-latest
+    container:
+      image: ruby:3.2.4
     permissions:
       contents: write
       pull-requests: write
