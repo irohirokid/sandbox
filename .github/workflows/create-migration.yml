@@ -10,32 +10,14 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
-      redis:
-        image: redis:6.2.1
     permissions:
       contents: write
       pull-requests: write
     env:
-      CLIENT_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+      DB_HOST: mysql
     steps:
       - uses: actions/checkout@v4.1.0
       - uses: ruby/setup-ruby@v1
-      - run: gem install bundler
-      - run: bundle install
-      - run: bundle exec rails new . -n my_app -f
-      - name: Commit and push migration
-        run: |
-          git add .
-          git diff --cached --quiet && { echo "Migration file was not created"; exit 1; }
-          git commit -m "${{ steps.branch.outputs.commit_title }}"
-          git push origin "${{ steps.branch.outputs.branch }}"
-      - name: Create PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          BODY=$(printf 'Auto-generated migration from spec:\n\n```json\n%s\n```' "$(echo "$CLIENT_PAYLOAD" | jq '.')")
-          gh pr create \
-            --base "${{ steps.branch.outputs.base }}" \
-            --head "${{ steps.branch.outputs.branch }}" \
-            --title "${{ steps.branch.outputs.commit_title }}" \
-            --body "$BODY"
+        with:
+          bundler-cache: true
+      - run: bundle exec rails db:create
