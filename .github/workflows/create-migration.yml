@@ -5,6 +5,13 @@ on:
 jobs:
   migration:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+      redis:
+        image: redis:6.2.1
     permissions:
       contents: write
       pull-requests: write
@@ -12,32 +19,6 @@ jobs:
       CLIENT_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
     steps:
       - uses: actions/checkout@v4.1.0
-      - name: Setup git and create branch
-        id: branch
-        run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-
-          BASE=$(echo "$CLIENT_PAYLOAD" | jq -r '.base_branch')
-          TYPE=$(echo "$CLIENT_PAYLOAD" | jq -r '.type')
-          TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
-
-          if [ "$TYPE" = "table" ]; then
-            TABLE=$(echo "$CLIENT_PAYLOAD" | jq -r '.name')
-            BRANCH="auto-migration-create-${TABLE}-${TIMESTAMP}"
-            COMMIT_TITLE="Create ${TABLE} table"
-          else
-            TABLE=$(echo "$CLIENT_PAYLOAD" | jq -r '.table')
-            BRANCH="auto-migration-add-columns-to-${TABLE}-${TIMESTAMP}"
-            COMMIT_TITLE="Add columns to ${TABLE}"
-          fi
-
-          git fetch origin "$BASE"
-          git checkout -b "$BRANCH" "origin/$BASE"
-
-          echo "base=$BASE" >> "$GITHUB_OUTPUT"
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
-          echo "commit_title=$COMMIT_TITLE" >> "$GITHUB_OUTPUT"
       - uses: ruby/setup-ruby@v1
       - run: gem install bundler
       - run: bundle install
