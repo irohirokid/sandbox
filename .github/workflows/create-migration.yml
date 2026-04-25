@@ -10,11 +10,14 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     permissions:
       contents: write
       pull-requests: write
     env:
-      DB_HOST: mysql
+      DB_HOST: 127.0.0.1
     steps:
       - uses: actions/checkout@v4.1.0
       - uses: ruby/setup-ruby@v1
